@@ -1,0 +1,128 @@
+import { contextBridge, ipcRenderer } from 'electron'
+import { IPC } from '../shared/ipc-channels'
+
+const api = {
+  git: {
+    listWorktrees: (repoPath: string) =>
+      ipcRenderer.invoke(IPC.GIT_LIST_WORKTREES, repoPath),
+    createWorktree: (repoPath: string, name: string, branch: string, newBranch: boolean) =>
+      ipcRenderer.invoke(IPC.GIT_CREATE_WORKTREE, repoPath, name, branch, newBranch),
+    removeWorktree: (repoPath: string, worktreePath: string) =>
+      ipcRenderer.invoke(IPC.GIT_REMOVE_WORKTREE, repoPath, worktreePath),
+    getStatus: (worktreePath: string) =>
+      ipcRenderer.invoke(IPC.GIT_GET_STATUS, worktreePath),
+    getDiff: (worktreePath: string, staged: boolean) =>
+      ipcRenderer.invoke(IPC.GIT_GET_DIFF, worktreePath, staged),
+    getFileDiff: (worktreePath: string, filePath: string) =>
+      ipcRenderer.invoke(IPC.GIT_GET_FILE_DIFF, worktreePath, filePath),
+    getBranches: (repoPath: string) =>
+      ipcRenderer.invoke(IPC.GIT_GET_BRANCHES, repoPath),
+    stage: (worktreePath: string, paths: string[]) =>
+      ipcRenderer.invoke(IPC.GIT_STAGE, worktreePath, paths),
+    unstage: (worktreePath: string, paths: string[]) =>
+      ipcRenderer.invoke(IPC.GIT_UNSTAGE, worktreePath, paths),
+    discard: (worktreePath: string, paths: string[], untracked: string[]) =>
+      ipcRenderer.invoke(IPC.GIT_DISCARD, worktreePath, paths, untracked),
+    commit: (worktreePath: string, message: string) =>
+      ipcRenderer.invoke(IPC.GIT_COMMIT, worktreePath, message),
+  },
+
+  pty: {
+    create: (workingDir: string, shell?: string, extraEnv?: Record<string, string>) =>
+      ipcRenderer.invoke(IPC.PTY_CREATE, workingDir, shell, extraEnv),
+    write: (ptyId: string, data: string) =>
+      ipcRenderer.send(IPC.PTY_WRITE, ptyId, data),
+    resize: (ptyId: string, cols: number, rows: number) =>
+      ipcRenderer.send(IPC.PTY_RESIZE, ptyId, cols, rows),
+    destroy: (ptyId: string) =>
+      ipcRenderer.send(IPC.PTY_DESTROY, ptyId),
+    onData: (ptyId: string, callback: (data: string) => void) => {
+      const channel = `${IPC.PTY_DATA}:${ptyId}`
+      const listener = (_event: Electron.IpcRendererEvent, data: string) => callback(data)
+      ipcRenderer.on(channel, listener)
+      return () => {
+        ipcRenderer.removeListener(channel, listener)
+      }
+    },
+  },
+
+  fs: {
+    getTree: (dirPath: string) =>
+      ipcRenderer.invoke(IPC.FS_GET_TREE, dirPath),
+    getTreeWithStatus: (dirPath: string) =>
+      ipcRenderer.invoke(IPC.FS_GET_TREE_WITH_STATUS, dirPath),
+    readFile: (filePath: string) =>
+      ipcRenderer.invoke(IPC.FS_READ_FILE, filePath),
+    writeFile: (filePath: string, content: string) =>
+      ipcRenderer.invoke(IPC.FS_WRITE_FILE, filePath, content),
+    watchDir: (dirPath: string) =>
+      ipcRenderer.invoke(IPC.FS_WATCH_START, dirPath),
+    unwatchDir: (dirPath: string) =>
+      ipcRenderer.send(IPC.FS_WATCH_STOP, dirPath),
+    onDirChanged: (callback: (dirPath: string) => void) => {
+      const listener = (_event: Electron.IpcRendererEvent, dirPath: string) => callback(dirPath)
+      ipcRenderer.on(IPC.FS_WATCH_CHANGED, listener)
+      return () => {
+        ipcRenderer.removeListener(IPC.FS_WATCH_CHANGED, listener)
+      }
+    },
+  },
+
+  app: {
+    selectDirectory: () =>
+      ipcRenderer.invoke(IPC.APP_SELECT_DIRECTORY),
+    addProjectPath: (dirPath: string) =>
+      ipcRenderer.invoke(IPC.APP_ADD_PROJECT_PATH, dirPath),
+    getDataPath: () =>
+      ipcRenderer.invoke(IPC.APP_GET_DATA_PATH),
+  },
+
+  claude: {
+    trustPath: (dirPath: string) =>
+      ipcRenderer.invoke(IPC.CLAUDE_TRUST_PATH, dirPath),
+    installHooks: () =>
+      ipcRenderer.invoke(IPC.CLAUDE_INSTALL_HOOKS),
+    uninstallHooks: () =>
+      ipcRenderer.invoke(IPC.CLAUDE_UNINSTALL_HOOKS),
+    checkHooks: () =>
+      ipcRenderer.invoke(IPC.CLAUDE_CHECK_HOOKS),
+    onNotifyWorkspace: (callback: (workspaceId: string) => void) => {
+      const listener = (_event: Electron.IpcRendererEvent, wsId: string) => callback(wsId)
+      ipcRenderer.on(IPC.CLAUDE_NOTIFY_WORKSPACE, listener)
+      return () => {
+        ipcRenderer.removeListener(IPC.CLAUDE_NOTIFY_WORKSPACE, listener)
+      }
+    },
+  },
+
+  automations: {
+    create: (automation: unknown) =>
+      ipcRenderer.invoke(IPC.AUTOMATION_CREATE, automation),
+    update: (automation: unknown) =>
+      ipcRenderer.invoke(IPC.AUTOMATION_UPDATE, automation),
+    delete: (automationId: string) =>
+      ipcRenderer.invoke(IPC.AUTOMATION_DELETE, automationId),
+    runNow: (automation: unknown) =>
+      ipcRenderer.invoke(IPC.AUTOMATION_RUN_NOW, automation),
+    stop: (automationId: string) =>
+      ipcRenderer.invoke(IPC.AUTOMATION_STOP, automationId),
+    onRunStarted: (callback: (data: { automationId: string; automationName: string; projectId: string; ptyId: string; worktreePath: string; branch: string }) => void) => {
+      const listener = (_event: Electron.IpcRendererEvent, data: { automationId: string; automationName: string; projectId: string; ptyId: string; worktreePath: string; branch: string }) => callback(data)
+      ipcRenderer.on(IPC.AUTOMATION_RUN_STARTED, listener)
+      return () => {
+        ipcRenderer.removeListener(IPC.AUTOMATION_RUN_STARTED, listener)
+      }
+    },
+  },
+
+  state: {
+    save: (data: unknown) =>
+      ipcRenderer.invoke(IPC.STATE_SAVE, data),
+    load: () =>
+      ipcRenderer.invoke(IPC.STATE_LOAD),
+  },
+}
+
+contextBridge.exposeInMainWorld('api', api)
+
+export type ElectronAPI = typeof api

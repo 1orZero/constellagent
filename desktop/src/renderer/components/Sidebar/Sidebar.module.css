@@ -1,0 +1,269 @@
+/* Sidebar — slightly darker than center, subtle left edge */
+
+.sidebar {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: var(--surface-0);
+  border-right: 1px solid var(--border-subtle);
+  overflow: hidden;
+}
+
+/* macOS traffic light spacing */
+.titleArea {
+  height: var(--titlebar-height);
+  -webkit-app-region: drag;
+  flex-shrink: 0;
+}
+
+.projectList {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: var(--space-2) 0;
+}
+
+/* ── Project Section ── */
+
+.projectSection {
+  margin-bottom: var(--space-2);
+}
+
+.projectHeader {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-6);
+  cursor: pointer;
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  transition: color var(--transition-fast);
+  position: relative;
+}
+
+.projectHeader:hover {
+  color: var(--text-primary);
+}
+
+.chevron {
+  font-size: 8px;
+  transition: transform var(--transition-default);
+  flex-shrink: 0;
+  opacity: 0.6;
+}
+
+.chevronOpen {
+  transform: rotate(90deg);
+}
+
+.projectName {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Settings button — hidden by default, shown on hover */
+.settingsBtn {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  position: absolute;
+  right: calc(var(--space-2) + 22px);
+  width: 18px;
+  height: 18px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: var(--surface-0);
+  color: var(--text-tertiary);
+  font-size: 12px;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: all var(--transition-fast);
+  padding: 0;
+  line-height: 1;
+  z-index: 1;
+}
+
+.settingsBtn:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text-primary);
+}
+
+.projectHeader:hover .settingsBtn {
+  display: flex;
+}
+
+/* Delete button — absolutely positioned, hidden by default, shown on hover */
+.deleteBtn {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  position: absolute;
+  right: var(--space-2);
+  width: 18px;
+  height: 18px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: var(--surface-0);
+  color: var(--text-tertiary);
+  font-size: 9px;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: all var(--transition-fast);
+  padding: 0;
+  line-height: 1;
+  z-index: 1;
+}
+
+.deleteBtn:hover {
+  background: var(--accent-red-dim);
+  color: var(--accent-red);
+}
+
+.projectHeader:hover .deleteBtn,
+.workspaceItem:hover .deleteBtn {
+  display: flex;
+}
+
+/* ── Workspace Items ── */
+
+.workspaceList {
+  padding: 0 var(--space-4);
+}
+
+.workspaceItem {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-4);
+  margin: 1px 0;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  color: var(--text-secondary);
+  font-size: var(--text-base);
+  font-family: var(--font-mono);
+  transition: all var(--transition-fast);
+  position: relative;
+}
+
+.workspaceItem:hover {
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--text-primary);
+}
+
+.workspaceItem.active {
+  background: var(--accent-blue-glow);
+  color: var(--accent-blue);
+}
+
+/* Active indicator — thin left bar */
+.workspaceItem.active::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 4px;
+  bottom: 4px;
+  width: 2px;
+  background: var(--accent-blue);
+  border-radius: var(--radius-full);
+}
+
+/* Unread indicator — light blue dot */
+.workspaceItem.unread::after {
+  content: '';
+  position: absolute;
+  right: var(--space-4);
+  top: 50%;
+  transform: translateY(-50%);
+  width: 7px;
+  height: 7px;
+  background: var(--accent-blue);
+  border-radius: var(--radius-full);
+  flex-shrink: 0;
+}
+
+.workspaceIcon {
+  font-size: var(--text-sm);
+  opacity: 0.5;
+  flex-shrink: 0;
+  width: 14px;
+  text-align: center;
+}
+
+.workspaceItem.active .workspaceIcon {
+  opacity: 1;
+}
+
+.workspaceNameCol {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.workspaceName {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.workspaceMeta {
+  font-size: var(--text-xs);
+  color: var(--text-tertiary);
+  font-family: var(--font-mono);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  margin-top: 1px;
+}
+
+.branchBadge {
+  font-size: var(--text-xs);
+  color: var(--text-tertiary);
+  font-family: var(--font-mono);
+  flex-shrink: 0;
+}
+
+/* ── Bottom Actions ── */
+
+.actions {
+  flex-shrink: 0;
+  padding: var(--space-4) var(--space-6);
+  border-top: 1px solid var(--border-subtle);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.actionButton {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-md);
+  border: none;
+  background: none;
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+  font-family: var(--font-ui);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  width: 100%;
+  text-align: left;
+}
+
+.actionButton:hover {
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text-primary);
+}
+
+.actionIcon {
+  font-size: var(--text-md);
+  opacity: 0.5;
+  width: 16px;
+  text-align: center;
+}

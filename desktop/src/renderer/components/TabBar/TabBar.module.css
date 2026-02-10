@@ -1,0 +1,181 @@
+/* Tab Bar — VS Code-inspired but cleaner */
+
+.tabBar {
+  display: flex;
+  align-items: stretch;
+  height: var(--tab-height);
+  background: var(--surface-0);
+  border-bottom: 1px solid var(--border-subtle);
+  overflow-x: auto;
+  overflow-y: hidden;
+  flex-shrink: 0;
+  -webkit-app-region: drag;
+}
+
+/* Scrollbar hidden but functional */
+.tabBar::-webkit-scrollbar {
+  height: 0;
+}
+
+.tabList {
+  display: flex;
+  align-items: stretch;
+  min-width: 0;
+  -webkit-app-region: no-drag;
+}
+
+/* ── Individual Tab ── */
+
+.tab {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: 0 var(--space-6);
+  min-width: 100px;
+  max-width: 200px;
+  cursor: pointer;
+  color: var(--text-tertiary);
+  font-size: var(--text-sm);
+  border-right: 1px solid var(--border-subtle);
+  position: relative;
+  transition: color var(--transition-fast), background var(--transition-fast);
+  -webkit-app-region: no-drag;
+}
+
+.tab:hover {
+  color: var(--text-secondary);
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.tab.active {
+  color: var(--text-primary);
+  background: var(--surface-1);
+}
+
+/* Active tab top highlight — thin accent line */
+.tab.active::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: var(--accent-blue);
+}
+
+/* ── Tab Icon ── */
+
+.tabIcon {
+  font-size: var(--text-sm);
+  flex-shrink: 0;
+  width: 14px;
+  text-align: center;
+  opacity: 0.6;
+}
+
+.tab.active .tabIcon {
+  opacity: 1;
+}
+
+/* Color-code by type */
+.tabIcon.terminal {
+  color: var(--accent-green);
+}
+
+.tabIcon.file {
+  color: var(--accent-blue);
+}
+
+.tabIcon.diff {
+  color: var(--accent-orange);
+}
+
+/* ── Tab Title ── */
+
+.tabTitle {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+}
+
+/* ── Unsaved Indicator ── */
+
+.unsavedDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--accent-blue);
+  flex-shrink: 0;
+}
+
+/* ── Save Flash ── */
+
+.savedFlash {
+  animation: savedPulse 1.2s ease-out forwards;
+}
+
+@keyframes savedPulse {
+  0% { color: var(--accent-green); }
+  100% { color: inherit; }
+}
+
+/* ── Close Button ── */
+
+.closeButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border-radius: var(--radius-sm);
+  border: none;
+  background: none;
+  color: var(--text-tertiary);
+  font-size: 10px;
+  cursor: pointer;
+  opacity: 0;
+  transition: all var(--transition-fast);
+  flex-shrink: 0;
+}
+
+.tab:hover .closeButton,
+.tab.active .closeButton {
+  opacity: 1;
+}
+
+.closeButton:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--text-primary);
+}
+
+/* ── New Tab Button ── */
+
+.newTabButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--tab-height);
+  height: var(--tab-height);
+  border: none;
+  background: none;
+  color: var(--text-tertiary);
+  font-size: var(--text-lg);
+  cursor: pointer;
+  transition: color var(--transition-fast);
+  flex-shrink: 0;
+  -webkit-app-region: no-drag;
+}
+
+.newTabButton:hover {
+  color: var(--text-primary);
+}
+
+/* ── Spacer (drag region) ── */
+
+.dragSpacer {
+  flex: 1;
+  -webkit-app-region: drag;
+}
