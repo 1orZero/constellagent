@@ -47,6 +47,14 @@ function createWindow(): void {
 
 app.setName('Constellagent')
 
+// Isolate test data so e2e tests never touch real app state
+if (process.env.CI_TEST) {
+  const { mkdtempSync } = require('fs')
+  const { join } = require('path')
+  const testData = mkdtempSync(join(require('os').tmpdir(), 'constellagent-test-'))
+  app.setPath('userData', testData)
+}
+
 app.whenReady().then(() => {
   // Custom menu: keep standard Edit shortcuts (copy/paste/undo) but remove
   // Cmd+W (close window) and Cmd+N (new window) so they reach the renderer

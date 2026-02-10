@@ -53,7 +53,7 @@ Single Zustand store (`app-store.ts`) with this shape:
 ## Testing
 
 E2e tests use Playwright's `_electron` adapter. Key conventions:
-- `CI_TEST=1` env var suppresses `mainWindow.show()` for headless runs
+- `CI_TEST=1` env var suppresses `mainWindow.show()` and redirects `userData` to a temp directory (tests never touch real app state)
 - Tests reset store state at start: `store.hydrateState({ projects: [], workspaces: [] })`
 - Tests create temp git repos in `/tmp`, use `realpathSync()` for macOS symlink resolution
 - `contextBridge` freezes `window.api` — can't spy on methods, test behavior indirectly
