@@ -1,6 +1,6 @@
 import { execFile } from 'child_process'
 import { existsSync } from 'fs'
-import { rm } from 'fs/promises'
+import { copyFile, mkdir, readdir, rm } from 'fs/promises'
 import { promisify } from 'util'
 import { basename, dirname, join, resolve } from 'path'
 
@@ -61,6 +61,26 @@ function friendlyGitError(err: unknown, fallback: string): string {
   if (fatal) return fatal
 
   return fallback
+}
+
+const SKIP_DIRS = new Set(['node_modules', '.git', 'dist', 'build', 'out', '.next'])
+
+async function copyEnvFiles(dir: string, destRoot: string, srcRoot: string): Promise<void> {
+  try {
+    const entries = await readdir(dir, { withFileTypes: true })
+    for (const entry of entries) {
+      if (entry.isDirectory() && !SKIP_DIRS.has(entry.name)) {
+        await copyEnvFiles(join(dir, entry.name), destRoot, srcRoot)
+      } else if (entry.isFile() && entry.name.startsWith('.env')) {
+        const rel = join(dir, entry.name).slice(srcRoot.length + 1)
+        const dest = join(destRoot, rel)
+        if (!existsSync(dest)) {
+          await mkdir(dirname(dest), { recursive: true }).catch(() => {})
+          await copyFile(join(dir, entry.name), dest).catch(() => {})
+        }
+      }
+    }
+  } catch {}
 }
 
 export class GitService {
@@ -168,6 +188,9 @@ export class GitService {
     if (!newBranch || branchExists) {
       await git(['pull', '--ff-only'], worktreePath).catch(() => {})
     }
+
+    // Copy .env files that are missing from the worktree (gitignored) from the main repo
+    await copyEnvFiles(repoPath, worktreePath, repoPath)
 
     return worktreePath
   }
