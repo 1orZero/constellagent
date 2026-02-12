@@ -172,27 +172,33 @@
   border-radius: var(--radius-full);
 }
 
-/* Unread indicator — light blue dot */
+/* Hide workspace icon when indicator is showing */
+.workspaceItem.unread .workspaceIcon,
+.workspaceItem.claudeActive .workspaceIcon {
+  visibility: hidden;
+}
+
+/* Unread indicator — light blue dot (replaces icon) */
 .workspaceItem.unread::after {
   content: '';
   position: absolute;
-  right: var(--space-4);
+  left: calc(var(--space-4) + 3.5px);
   top: 50%;
-  transform: translateY(-50%);
+  transform: translate(-50%, -50%);
   width: 7px;
   height: 7px;
   background: var(--accent-blue);
   border-radius: var(--radius-full);
-  flex-shrink: 0;
 }
 
-/* Claude active indicator — smooth arc spinner */
+/* Claude active indicator — smooth arc spinner (replaces icon) */
 .workspaceItem.claudeActive::after {
   content: '';
   position: absolute;
-  right: var(--space-4);
+  left: calc(var(--space-4) + 7px);
   top: 50%;
   margin-top: -5px;
+  margin-left: -5.5px;
   width: 11px;
   height: 11px;
   border-radius: var(--radius-full);
