@@ -35,7 +35,7 @@ function cleanupTestRepo(repoPath: string): void {
     if (repoName) {
       const entries = readdirSync(parentDir)
       for (const entry of entries) {
-        if (entry.startsWith(`${repoName}-ws-`)) {
+        if (entry.startsWith(`${repoName}-ws-`) || entry.startsWith(`${repoName}-clone-`)) {
           rmSync(join(parentDir, entry), { recursive: true, force: true })
         }
       }
@@ -209,6 +209,31 @@ test.describe('IPC handlers & state persistence', () => {
       expect(leafName).toContain('-ws-')
       expect(leafName).not.toContain('..')
       expect(leafName).not.toContain('/')
+    } finally {
+      await app.close()
+      cleanupTestRepo(repoPath)
+    }
+  })
+
+  test('clone workspace can be removed without touching main repo', async () => {
+    const repoPath = createTestRepo('clone-delete')
+    const { app, window } = await launchApp()
+
+    try {
+      const clonePath = await window.evaluate(async (repo: string) => {
+        return await (window as any).api.git.createCloneWorkspace(repo, 'delete-clone', 'delete-clone-branch', true, 'main')
+      }, repoPath)
+
+      expect(existsSync(clonePath as string)).toBe(true)
+      expect(existsSync(repoPath)).toBe(true)
+
+      await window.evaluate(async ({ repo, target }: { repo: string; target: string }) => {
+        await (window as any).api.git.removeWorktree(repo, target)
+      }, { repo: repoPath, target: clonePath as string })
+
+      expect(existsSync(clonePath as string)).toBe(false)
+      expect(existsSync(repoPath)).toBe(true)
+      expect(existsSync(join(repoPath, '.git'))).toBe(true)
     } finally {
       await app.close()
       cleanupTestRepo(repoPath)

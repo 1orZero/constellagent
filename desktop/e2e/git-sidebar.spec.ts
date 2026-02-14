@@ -37,7 +37,7 @@ function cleanupTestRepo(repoPath: string): void {
     if (repoName) {
       const entries = readdirSync(parentDir)
       for (const entry of entries) {
-        if (entry.startsWith(`${repoName}-ws-`)) {
+        if (entry.startsWith(`${repoName}-ws-`) || entry.startsWith(`${repoName}-clone-`)) {
           rmSync(join(parentDir, entry), { recursive: true, force: true })
         }
       }
@@ -103,6 +103,25 @@ test.describe('Git & Sidebar functionality', () => {
       expect(worktrees.length).toBeGreaterThanOrEqual(2) // main + our worktree
       const found = worktrees.find((wt: any) => wt.branch === 'e2e-branch')
       expect(found).toBeTruthy()
+    } finally {
+      await app.close()
+      cleanupTestRepo(repoPath)
+    }
+  })
+
+  test('create workspace via IPC produces clone workspace on disk', async () => {
+    const repoPath = createTestRepo('git-clone')
+    const { app, window } = await launchApp()
+
+    try {
+      const clonePath = await window.evaluate(async (repo: string) => {
+        return await (window as any).api.git.createCloneWorkspace(repo, 'clone-ws', 'clone-branch', true, 'main')
+      }, repoPath)
+
+      expect(clonePath).toBeTruthy()
+      expect(clonePath).toContain('-clone-clone-ws')
+      expect(existsSync(clonePath as string)).toBe(true)
+      expect(existsSync(join(clonePath as string, '.git'))).toBe(true)
     } finally {
       await app.close()
       cleanupTestRepo(repoPath)
