@@ -49,6 +49,38 @@ async function setupWorkspaceWithTerminal(window: Page, repoPath: string) {
   }, repoPath)
 }
 
+async function setupTwoWorkspacesWithTerminals(window: Page, repoPath: string) {
+  return await window.evaluate(async (repo: string) => {
+    const store = (window as any).__store.getState()
+    store.hydrateState({ projects: [], workspaces: [] })
+
+    const projectId = crypto.randomUUID()
+    store.addProject({ id: projectId, name: 'test-repo', repoPath: repo })
+
+    const worktreePath1 = await (window as any).api.git.createWorktree(repo, 'ws-1', 'branch-1', true)
+    const ws1Id = crypto.randomUUID()
+    store.addWorkspace({
+      id: ws1Id, name: 'ws-1', branch: 'branch-1', worktreePath: worktreePath1, projectId,
+    })
+    const ptyId1 = await (window as any).api.pty.create(worktreePath1)
+    store.addTab({
+      id: crypto.randomUUID(), workspaceId: ws1Id, type: 'terminal', title: 'Terminal 1', ptyId: ptyId1,
+    })
+
+    const worktreePath2 = await (window as any).api.git.createWorktree(repo, 'ws-2', 'branch-2', true)
+    const ws2Id = crypto.randomUUID()
+    store.addWorkspace({
+      id: ws2Id, name: 'ws-2', branch: 'branch-2', worktreePath: worktreePath2, projectId,
+    })
+    const ptyId2 = await (window as any).api.pty.create(worktreePath2)
+    store.addTab({
+      id: crypto.randomUUID(), workspaceId: ws2Id, type: 'terminal', title: 'Terminal 1', ptyId: ptyId2,
+    })
+
+    return { ws1Id, ws2Id }
+  }, repoPath)
+}
+
 test.describe('Keyboard shortcuts', () => {
   test('Cmd+T creates new terminal tab', async () => {
     const repoPath = createTestRepo('shortcut-t')
@@ -117,6 +149,66 @@ test.describe('Keyboard shortcuts', () => {
         return tab?.title
       })
       expect(activeTitleBack).toBe('Terminal 2')
+    } finally {
+      await app.close()
+    }
+  })
+
+  test('Ctrl+1/Ctrl+2 switches workspaces', async () => {
+    const repoPath = createTestRepo('shortcut-workspace-default')
+    const { app, window } = await launchApp()
+
+    try {
+      const { ws1Id, ws2Id } = await setupTwoWorkspacesWithTerminals(window, repoPath)
+      await window.waitForTimeout(2000)
+
+      // Second workspace is active after setup
+      expect(await window.evaluate(() => (window as any).__store.getState().activeWorkspaceId)).toBe(ws2Id)
+
+      await window.keyboard.press('Control+1')
+      await window.waitForTimeout(500)
+      expect(await window.evaluate(() => (window as any).__store.getState().activeWorkspaceId)).toBe(ws1Id)
+
+      await window.keyboard.press('Control+2')
+      await window.waitForTimeout(500)
+      expect(await window.evaluate(() => (window as any).__store.getState().activeWorkspaceId)).toBe(ws2Id)
+    } finally {
+      await app.close()
+    }
+  })
+
+  test('Custom workspace shortcut switches workspace', async () => {
+    const repoPath = createTestRepo('shortcut-workspace-custom')
+    const { app, window } = await launchApp()
+
+    try {
+      const { ws1Id, ws2Id } = await setupTwoWorkspacesWithTerminals(window, repoPath)
+      await window.waitForTimeout(2000)
+
+      await window.evaluate(() => {
+        const store = (window as any).__store.getState()
+        const shortcuts = store.settings.shortcuts
+        const workspaceByIndex = [...shortcuts.workspaceByIndex]
+        workspaceByIndex[0] = {
+          code: 'Digit7',
+          meta: true,
+          ctrl: false,
+          shift: false,
+          alt: false,
+        }
+        store.updateSettings({
+          shortcuts: {
+            ...shortcuts,
+            workspaceByIndex,
+          },
+        })
+      })
+
+      expect(await window.evaluate(() => (window as any).__store.getState().activeWorkspaceId)).toBe(ws2Id)
+
+      await window.keyboard.press('Meta+7')
+      await window.waitForTimeout(500)
+      expect(await window.evaluate(() => (window as any).__store.getState().activeWorkspaceId)).toBe(ws1Id)
     } finally {
       await app.close()
     }

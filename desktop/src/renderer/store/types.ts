@@ -48,6 +48,46 @@ export type RightPanelMode = 'files' | 'changes'
 export type PrLinkProvider = 'github' | 'graphite' | 'devinreview'
 export type WorkspaceCreationMode = 'worktree' | 'clone'
 
+export interface ShortcutBinding {
+  code: string
+  meta: boolean
+  ctrl: boolean
+  shift: boolean
+  alt: boolean
+}
+
+export interface ShortcutSettings {
+  tabByIndex: Array<ShortcutBinding | null>
+  workspaceByIndex: Array<ShortcutBinding | null>
+}
+
+function createDefaultTabShortcuts(): Array<ShortcutBinding | null> {
+  return Array.from({ length: 9 }, (_v, index) => ({
+    code: `Digit${index + 1}`,
+    meta: true,
+    ctrl: false,
+    shift: false,
+    alt: false,
+  }))
+}
+
+function createDefaultWorkspaceShortcuts(): Array<ShortcutBinding | null> {
+  return Array.from({ length: 9 }, (_v, index) => ({
+    code: `Digit${index + 1}`,
+    meta: false,
+    ctrl: true,
+    shift: false,
+    alt: false,
+  }))
+}
+
+export function createDefaultShortcutSettings(): ShortcutSettings {
+  return {
+    tabByIndex: createDefaultTabShortcuts(),
+    workspaceByIndex: createDefaultWorkspaceShortcuts(),
+  }
+}
+
 export interface Settings {
   confirmOnClose: boolean
   autoSaveOnBlur: boolean
@@ -60,6 +100,7 @@ export interface Settings {
   terminalFontSize: number
   terminalFontFamily: string
   editorFontSize: number
+  shortcuts: ShortcutSettings
 }
 
 export const DEFAULT_TERMINAL_FONT_FAMILY = "'SF Mono', Menlo, 'Cascadia Code', monospace"
@@ -76,6 +117,7 @@ export const DEFAULT_SETTINGS: Settings = {
   terminalFontSize: 14,
   terminalFontFamily: DEFAULT_TERMINAL_FONT_FAMILY,
   editorFontSize: 13,
+  shortcuts: createDefaultShortcutSettings(),
 }
 
 export interface Toast {
@@ -139,6 +181,7 @@ export interface AppState {
   openDiffTab: (workspaceId: string) => void
   nextWorkspace: () => void
   prevWorkspace: () => void
+  switchToWorkspaceByIndex: (index: number) => void
   switchToTabByIndex: (index: number) => void
   closeAllWorkspaceTabs: () => void
   focusOrCreateTerminal: () => Promise<void>

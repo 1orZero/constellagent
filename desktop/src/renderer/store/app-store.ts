@@ -4,6 +4,12 @@ import { DEFAULT_SETTINGS } from './types'
 
 const DEFAULT_PR_LINK_PROVIDER = 'github' as const
 
+function getOrderedWorkspaces(state: Pick<AppState, 'projects' | 'workspaces'>) {
+  return state.projects.flatMap((project) =>
+    state.workspaces.filter((workspace) => workspace.projectId === project.id),
+  )
+}
+
 export const useAppStore = create<AppState>((set, get) => ({
   projects: [],
   workspaces: [],
@@ -272,9 +278,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     const s = get()
     if (s.workspaces.length <= 1) return
     // Build visual order: workspaces grouped by project, matching sidebar display
-    const ordered = s.projects.flatMap((p) =>
-      s.workspaces.filter((w) => w.projectId === p.id),
-    )
+    const ordered = getOrderedWorkspaces(s)
     if (ordered.length <= 1) return
     const idx = ordered.findIndex((w) => w.id === s.activeWorkspaceId)
     const next = ordered[(idx + 1) % ordered.length]
@@ -284,13 +288,18 @@ export const useAppStore = create<AppState>((set, get) => ({
   prevWorkspace: () => {
     const s = get()
     if (s.workspaces.length <= 1) return
-    const ordered = s.projects.flatMap((p) =>
-      s.workspaces.filter((w) => w.projectId === p.id),
-    )
+    const ordered = getOrderedWorkspaces(s)
     if (ordered.length <= 1) return
     const idx = ordered.findIndex((w) => w.id === s.activeWorkspaceId)
     const prev = ordered[(idx - 1 + ordered.length) % ordered.length]
     get().setActiveWorkspace(prev.id)
+  },
+
+  switchToWorkspaceByIndex: (index) => {
+    const s = get()
+    const ordered = getOrderedWorkspaces(s)
+    if (index < 0 || index >= ordered.length) return
+    get().setActiveWorkspace(ordered[index].id)
   },
 
   switchToTabByIndex: (index) => {
