@@ -561,6 +561,12 @@ export async function hydrateFromDisk(): Promise<void> {
     console.error('Failed to load persisted state:', err)
   }
 
+  try {
+    await window.api.app.setZoomFactor(useAppStore.getState().settings.uiZoomFactor)
+  } catch (err) {
+    console.error('Failed to apply persisted UI zoom factor:', err)
+  }
+
   // Reconcile persisted terminal tabs against live PTY processes
   try {
     const livePtyIds = new Set(await window.api.pty.list())

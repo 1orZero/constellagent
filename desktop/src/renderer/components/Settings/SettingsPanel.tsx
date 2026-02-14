@@ -20,9 +20,9 @@ const SHORTCUTS = [
   { action: 'Files panel', keys: '⇧⌘E' },
   { action: 'Changes panel', keys: '⇧⌘G' },
   { action: 'Focus terminal', keys: '⌘J' },
-  { action: 'Increase font size', keys: '⌘+' },
-  { action: 'Decrease font size', keys: '⌘−' },
-  { action: 'Reset font size', keys: '⌘0' },
+  { action: 'Zoom in', keys: '⌘+' },
+  { action: 'Zoom out', keys: '⌘−' },
+  { action: 'Reset zoom', keys: '⌘0' },
   { action: 'Settings', keys: '⌘,' },
 ]
 
@@ -97,6 +97,44 @@ function NumberRow({ label, description, value, onChange, min = 8, max = 32 }: {
         <button
           className={styles.stepperBtn}
           onClick={() => onChange(Math.min(max, value + 1))}
+          disabled={value >= max}
+        >
+          +
+        </button>
+      </div>
+    </div>
+  )
+}
+
+function ZoomRow({ label, description, value, onChange }: {
+  label: string
+  description: string
+  value: number
+  onChange: (v: number) => void
+}) {
+  const min = 0.5
+  const max = 2
+  const step = 0.1
+  const display = `${Math.round(value * 100)}%`
+
+  return (
+    <div className={styles.row}>
+      <div className={styles.rowText}>
+        <div className={styles.rowLabel}>{label}</div>
+        <div className={styles.rowDescription}>{description}</div>
+      </div>
+      <div className={styles.stepper}>
+        <button
+          className={styles.stepperBtn}
+          onClick={() => onChange(Math.max(min, Math.round((value - step) * 10) / 10))}
+          disabled={value <= min}
+        >
+          −
+        </button>
+        <span className={styles.stepperValue}>{display}</span>
+        <button
+          className={styles.stepperBtn}
+          onClick={() => onChange(Math.min(max, Math.round((value + step) * 10) / 10))}
           disabled={value >= max}
         >
           +
@@ -266,6 +304,13 @@ export function SettingsPanel() {
         <div className={styles.inner}>
         <div className={styles.section}>
           <div className={styles.sectionTitle}>Appearance</div>
+
+          <ZoomRow
+            label="Interface zoom"
+            description="Scale the entire app interface"
+            value={settings.uiZoomFactor}
+            onChange={(v) => update('uiZoomFactor', v)}
+          />
 
           <NumberRow
             label="Terminal font size"

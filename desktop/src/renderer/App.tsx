@@ -62,6 +62,13 @@ export function App() {
   const settingsOpen = useAppStore((s) => s.settingsOpen)
   const automationsOpen = useAppStore((s) => s.automationsOpen)
   const quickOpenVisible = useAppStore((s) => s.quickOpenVisible)
+  const uiZoomFactor = useAppStore((s) => s.settings.uiZoomFactor)
+
+  useEffect(() => {
+    window.api.app.setZoomFactor(uiZoomFactor).catch((err) => {
+      console.error('Failed to apply UI zoom factor:', err)
+    })
+  }, [uiZoomFactor])
 
   const wsTabs = activeWorkspaceTabs()
   const activeTab = wsTabs.find((t) => t.id === activeTabId)

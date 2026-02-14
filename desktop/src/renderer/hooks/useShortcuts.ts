@@ -154,19 +154,30 @@ export function useShortcuts() {
         return
       }
 
-      // ── Font size: Cmd+= / Cmd+- / Cmd+0 ──
-      if (!shift && !alt && (e.key === '=' || e.key === '-' || e.key === '0')) {
+      // ── UI zoom: Cmd+/Ctrl + / - / 0 ──
+      if (!alt && (
+        e.key === '='
+        || e.key === '+'
+        || e.key === '-'
+        || e.key === '_'
+        || e.key === '0'
+        || e.code === 'NumpadAdd'
+        || e.code === 'NumpadSubtract'
+        || e.code === 'Numpad0'
+      )) {
         consume()
-        const tab = store.tabs.find((t) => t.id === store.activeTabId)
-        const isTerminal = tab?.type === 'terminal'
-        const key = isTerminal ? 'terminalFontSize' : 'editorFontSize'
-        if (e.key === '0') {
-          store.updateSettings({ terminalFontSize: 14, editorFontSize: 13 })
+        const current = store.settings.uiZoomFactor
+        let next = current
+
+        if (e.key === '0' || e.code === 'Numpad0') {
+          next = 1
+        } else if (e.key === '-' || e.key === '_' || e.code === 'NumpadSubtract') {
+          next = current - 0.1
         } else {
-          const current = store.settings[key]
-          const next = Math.max(8, Math.min(32, current + (e.key === '=' ? 1 : -1)))
-          store.updateSettings({ [key]: next })
+          next = current + 0.1
         }
+
+        store.updateSettings({ uiZoomFactor: Math.max(0.5, Math.min(2, Math.round(next * 10) / 10)) })
         return
       }
 
