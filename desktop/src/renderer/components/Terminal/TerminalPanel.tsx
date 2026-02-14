@@ -3,6 +3,7 @@ import { Terminal } from '@xterm/xterm'
 import { FitAddon } from '@xterm/addon-fit'
 import { WebLinksAddon } from '@xterm/addon-web-links'
 import { useAppStore } from '../../store/app-store'
+import { normalizeTerminalFontFamily } from '../../lib/terminal-font'
 import styles from './TerminalPanel.module.css'
 
 const PR_POLL_HINT_EVENT = 'constellagent:pr-poll-hint'
@@ -20,6 +21,7 @@ export function TerminalPanel({ ptyId, active }: Props) {
   const fitFnRef = useRef<(() => void) | null>(null)
   const inputLineRef = useRef('')
   const terminalFontSize = useAppStore((s) => s.settings.terminalFontSize)
+  const terminalFontFamily = useAppStore((s) => s.settings.terminalFontFamily)
 
   const emitPrPollHint = (command: string) => {
     const normalized = command.trim().toLowerCase()
@@ -81,7 +83,7 @@ export function TerminalPanel({ ptyId, active }: Props) {
 
         const term = new Terminal({
           fontSize: useAppStore.getState().settings.terminalFontSize,
-          fontFamily: "'SF Mono', Menlo, 'Cascadia Code', monospace",
+          fontFamily: normalizeTerminalFontFamily(useAppStore.getState().settings.terminalFontFamily),
           cursorBlink: true,
           cursorStyle: 'bar',
           scrollback: 10000,
@@ -201,14 +203,15 @@ export function TerminalPanel({ ptyId, active }: Props) {
     }
   }, [ptyId])
 
-  // Update font size on live terminals.
+  // Update terminal font settings on live terminals.
   useEffect(() => {
     const term = termRef.current
     if (!term) return
 
     term.options.fontSize = terminalFontSize
+    term.options.fontFamily = normalizeTerminalFontFamily(terminalFontFamily)
     fitFnRef.current?.()
-  }, [terminalFontSize])
+  }, [terminalFontSize, terminalFontFamily])
 
   // Focus + refit when this tab becomes active.
   useEffect(() => {

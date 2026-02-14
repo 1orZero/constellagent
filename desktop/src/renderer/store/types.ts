@@ -55,8 +55,11 @@ export interface Settings {
   restoreWorkspace: boolean
   diffInline: boolean
   terminalFontSize: number
+  terminalFontFamily: string
   editorFontSize: number
 }
+
+export const DEFAULT_TERMINAL_FONT_FAMILY = "'SF Mono', Menlo, 'Cascadia Code', monospace"
 
 export const DEFAULT_SETTINGS: Settings = {
   confirmOnClose: true,
@@ -66,6 +69,7 @@ export const DEFAULT_SETTINGS: Settings = {
   restoreWorkspace: true,
   diffInline: false,
   terminalFontSize: 14,
+  terminalFontFamily: DEFAULT_TERMINAL_FONT_FAMILY,
   editorFontSize: 13,
 }
 

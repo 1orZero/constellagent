@@ -274,6 +274,14 @@ export function SettingsPanel() {
             onChange={(v) => update('terminalFontSize', v)}
           />
 
+          <TextRow
+            label="Terminal font family"
+            description="Comma-separated font list; names with spaces are auto-quoted"
+            value={settings.terminalFontFamily}
+            onChange={(v) => update('terminalFontFamily', v)}
+            placeholder="'SF Mono', Menlo, 'Cascadia Code', monospace"
+          />
+
           <NumberRow
             label="Editor font size"
             description="Font size in pixels for file and diff editors"
