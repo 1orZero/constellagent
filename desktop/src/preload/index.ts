@@ -2,6 +2,7 @@ import { contextBridge, ipcRenderer } from 'electron'
 import { IPC } from '../shared/ipc-channels'
 import type { AutomationConfig, AutomationRunStartedEvent } from '../shared/automation-types'
 import type { CreateWorktreeProgressEvent } from '../shared/workspace-creation'
+import type { GraphiteCurrentStackSnapshot } from '../shared/graphite-types'
 
 const api = {
   git: {
@@ -155,6 +156,11 @@ const api = {
       ipcRenderer.invoke(IPC.GITHUB_GET_PR_STATUSES, repoPath, branches),
     listOpenPrs: (repoPath: string) =>
       ipcRenderer.invoke(IPC.GITHUB_LIST_OPEN_PRS, repoPath),
+  },
+
+  graphite: {
+    getCurrentStackSnapshot: (repoPath: string, worktreePath: string) =>
+      ipcRenderer.invoke(IPC.GRAPHITE_GET_CURRENT_STACK_SNAPSHOT, repoPath, worktreePath) as Promise<GraphiteCurrentStackSnapshot>,
   },
 
   clipboard: {

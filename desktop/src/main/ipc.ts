@@ -9,6 +9,7 @@ import type { CreateWorktreeProgressEvent } from '../shared/workspace-creation'
 import { PtyManager } from './pty-manager'
 import { GitService } from './git-service'
 import { GithubService } from './github-service'
+import { GraphiteService } from './graphite-service'
 import { FileService, type FileNode } from './file-service'
 import { AutomationScheduler } from './automation-scheduler'
 import type { AutomationConfig } from '../shared/automation-types'
@@ -247,6 +248,11 @@ export function registerIpcHandlers(): void {
 
   ipcMain.handle(IPC.GITHUB_LIST_OPEN_PRS, async (_e, repoPath: string) => {
     return GithubService.listOpenPrs(repoPath)
+  })
+
+  // ── Graphite handlers ──
+  ipcMain.handle(IPC.GRAPHITE_GET_CURRENT_STACK_SNAPSHOT, async (_e, repoPath: string, worktreePath: string) => {
+    return GraphiteService.getCurrentStackSnapshot(repoPath, worktreePath)
   })
 
   // ── PTY handlers ──

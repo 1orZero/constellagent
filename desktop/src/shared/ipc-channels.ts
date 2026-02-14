@@ -66,6 +66,9 @@ export const IPC = {
   GITHUB_GET_PR_STATUSES: 'github:get-pr-statuses',
   GITHUB_LIST_OPEN_PRS: 'github:list-open-prs',
 
+  // Graphite operations
+  GRAPHITE_GET_CURRENT_STACK_SNAPSHOT: 'graphite:get-current-stack-snapshot',
+
   // Clipboard operations
   CLIPBOARD_SAVE_IMAGE: 'clipboard:save-image',
 

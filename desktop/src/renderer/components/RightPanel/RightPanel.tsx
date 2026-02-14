@@ -9,8 +9,10 @@ export function RightPanel() {
   const setRightPanelMode = useAppStore((s) => s.setRightPanelMode)
   const activeWorkspaceId = useAppStore((s) => s.activeWorkspaceId)
   const workspaces = useAppStore((s) => s.workspaces)
+  const projects = useAppStore((s) => s.projects)
 
   const workspace = workspaces.find((w) => w.id === activeWorkspaceId)
+  const project = workspace ? projects.find((p) => p.id === workspace.projectId) : null
 
   return (
     <div className={styles.rightPanel}>
@@ -50,6 +52,7 @@ export function RightPanel() {
             </div>
             <div style={{ display: rightPanelMode === 'changes' ? 'contents' : 'none' }}>
               <ChangedFiles
+                repoPath={project?.repoPath}
                 worktreePath={workspace.worktreePath}
                 workspaceId={workspace.id}
                 isActive={rightPanelMode === 'changes'}

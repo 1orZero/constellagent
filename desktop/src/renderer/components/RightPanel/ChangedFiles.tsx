@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback } from 'react'
 import { useAppStore } from '../../store/app-store'
 import { Tooltip } from '../Tooltip/Tooltip'
+import type { GraphiteCurrentStackSnapshot } from '../../../shared/graphite-types'
 import styles from './RightPanel.module.css'
 
 interface FileStatus {
@@ -10,6 +11,7 @@ interface FileStatus {
 }
 
 interface Props {
+  repoPath?: string
   worktreePath: string
   workspaceId: string
   isActive?: boolean
@@ -23,30 +25,57 @@ const STATUS_LABELS: Record<string, string> = {
   untracked: 'U',
 }
 
-export function ChangedFiles({ worktreePath, workspaceId, isActive }: Props) {
+export function ChangedFiles({ repoPath, worktreePath, workspaceId, isActive }: Props) {
   const [files, setFiles] = useState<FileStatus[]>([])
+  const [graphiteSnapshot, setGraphiteSnapshot] = useState<GraphiteCurrentStackSnapshot | null>(null)
   const [loading, setLoading] = useState(true)
   const [busy, setBusy] = useState(false)
   const [commitMsg, setCommitMsg] = useState('')
   const openDiffTab = useAppStore((s) => s.openDiffTab)
 
-  const refresh = useCallback(() => {
-    window.api.git.getStatus(worktreePath).then(setFiles).catch(() => {})
-  }, [worktreePath])
+  const fetchGraphiteSnapshot = useCallback(async () => {
+    if (!repoPath) {
+      setGraphiteSnapshot(null)
+      return
+    }
+    try {
+      const snapshot = await window.api.graphite.getCurrentStackSnapshot(repoPath, worktreePath)
+      setGraphiteSnapshot(snapshot)
+    } catch {
+      setGraphiteSnapshot(null)
+    }
+  }, [repoPath, worktreePath])
+
+  const refresh = useCallback(async () => {
+    try {
+      const statuses = await window.api.git.getStatus(worktreePath)
+      setFiles(statuses)
+    } catch {
+      // Keep previous state on failure
+    }
+    await fetchGraphiteSnapshot()
+  }, [fetchGraphiteSnapshot, worktreePath])
 
   useEffect(() => {
     let cancelled = false
     setLoading(true)
-    window.api.git.getStatus(worktreePath).then((statuses) => {
+    Promise.all([
+      window.api.git.getStatus(worktreePath).catch(() => [] as FileStatus[]),
+      repoPath
+        ? window.api.graphite.getCurrentStackSnapshot(repoPath, worktreePath).catch(() => null)
+        : Promise.resolve(null),
+    ]).then(([statuses, snapshot]) => {
+      if (cancelled) return
+      setFiles(statuses)
+      setGraphiteSnapshot(snapshot)
+      setLoading(false)
+    }).catch(() => {
       if (!cancelled) {
-        setFiles(statuses)
         setLoading(false)
       }
-    }).catch(() => {
-      if (!cancelled) setLoading(false)
     })
     return () => { cancelled = true }
-  }, [worktreePath])
+  }, [repoPath, worktreePath])
 
   // Watch filesystem for changes and auto-refresh
   useEffect(() => {
@@ -54,7 +83,7 @@ export function ChangedFiles({ worktreePath, workspaceId, isActive }: Props) {
 
     const cleanup = window.api.fs.onDirChanged((changedPath) => {
       if (changedPath === worktreePath) {
-        refresh()
+        void refresh()
       }
     })
 
@@ -66,7 +95,9 @@ export function ChangedFiles({ worktreePath, workspaceId, isActive }: Props) {
 
   // Re-fetch when tab becomes visible (git ops only touch .git/ which the watcher ignores)
   useEffect(() => {
-    if (isActive) refresh()
+    if (isActive) {
+      void refresh()
+    }
   }, [isActive, refresh])
 
   const staged = files.filter((f) => f.staged)
@@ -79,7 +110,7 @@ export function ChangedFiles({ worktreePath, workspaceId, isActive }: Props) {
     } catch (err) {
       console.error('[ChangedFiles] git operation failed:', err)
     } finally {
-      refresh()
+      void refresh()
       setBusy(false)
     }
   }, [refresh])
@@ -123,7 +154,9 @@ export function ChangedFiles({ worktreePath, workspaceId, isActive }: Props) {
     )
   }
 
-  if (files.length === 0) {
+  const showGraphiteInline = graphiteSnapshot?.available === true
+
+  if (files.length === 0 && !showGraphiteInline) {
     return (
       <div className={styles.emptyState}>
         <span className={styles.emptyIcon}>✓</span>
@@ -194,8 +227,93 @@ export function ChangedFiles({ worktreePath, workspaceId, isActive }: Props) {
         </div>
       )}
 
-      {/* Unstaged section */}
-      {unstaged.length > 0 && (
+      {/* Changes section */}
+      {showGraphiteInline ? (
+        <div className={styles.changeSection}>
+          <div className={styles.sectionHeader}>
+            <span className={styles.sectionLabel}>Changes</span>
+            <span className={styles.sectionCount}>{unstaged.length}</span>
+            <span className={styles.sectionActions}>
+              <Tooltip label="Discard All">
+                <button
+                  className={styles.sectionAction}
+                  disabled={busy || unstaged.length === 0}
+                  onClick={() => {
+                    const tracked = unstaged.filter((f) => f.status !== 'untracked').map((f) => f.path)
+                    const untracked = unstaged.filter((f) => f.status === 'untracked').map((f) => f.path)
+                    runGitOp(() => window.api.git.discard(worktreePath, tracked, untracked))
+                  }}
+                >
+                  ↩
+                </button>
+              </Tooltip>
+              <Tooltip label="Stage All">
+                <button
+                  className={styles.sectionAction}
+                  disabled={busy || unstaged.length === 0}
+                  onClick={() => stageFiles(unstaged.map((f) => f.path))}
+                >
+                  +
+                </button>
+              </Tooltip>
+            </span>
+          </div>
+
+          <div className={styles.graphiteStackList}>
+            {graphiteSnapshot.branches.map((branch) => (
+              <div key={branch.name} className={styles.graphiteBranchItem}>
+              <div
+                className={[
+                  styles.graphiteBranchRow,
+                  branch.isCurrent ? styles.graphiteCurrentBranch : '',
+                  branch.isTrunk ? styles.graphiteTrunkBranch : '',
+                ].join(' ').trim()}
+                title={branch.name}
+              >
+                <span
+                  className={[
+                    styles.graphiteBranchDot,
+                    branch.isTrunk ? styles.graphiteBranchDotTrunk : '',
+                  ].join(' ').trim()}
+                />
+                <span className={styles.graphiteBranchName}>{branch.name}</span>
+                {branch.isTrunk && <span className={styles.graphiteTrunkLabel}>trunk</span>}
+                {branch.needsRestack && (
+                  <span
+                    className={styles.graphiteRestackWarning}
+                    title="This branch needs to be restacked. Use gt restack"
+                  >
+                    ⚠
+                  </span>
+                )}
+              </div>
+
+              {branch.isCurrent && (
+                <>
+                  {unstaged.length === 0 ? (
+                    <div className={styles.graphiteChildFileEmpty}>No uncommitted changes</div>
+                  ) : (
+                    unstaged.map((file) => (
+                      <div key={`graphite-unstaged-${file.path}`} className={styles.graphiteChildFile}>
+                        <FileRow
+                          file={file}
+                          busy={busy}
+                          onAction={() => stageFiles([file.path])}
+                          actionLabel="+"
+                          actionTitle="Stage"
+                          onDiscard={() => discardFiles(file)}
+                          onOpenDiff={openDiff}
+                        />
+                      </div>
+                    ))
+                  )}
+                </>
+              )}
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : unstaged.length > 0 && (
         <div className={styles.changeSection}>
           <div className={styles.sectionHeader}>
             <span className={styles.sectionLabel}>Changes</span>

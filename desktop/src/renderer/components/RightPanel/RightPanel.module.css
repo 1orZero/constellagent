@@ -321,6 +321,89 @@
   color: var(--text-tertiary);
 }
 
+/* ── Graphite Inline Stack ── */
+
+.graphiteStackList {
+  position: relative;
+}
+
+.graphiteStackList::before {
+  content: '';
+  position: absolute;
+  left: calc(var(--space-6) + 5px);
+  top: var(--space-2);
+  bottom: var(--space-2);
+  width: 1px;
+  background: var(--border-subtle);
+}
+
+.graphiteBranchItem {
+  position: relative;
+}
+
+.graphiteBranchRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-6);
+  font-size: var(--text-sm);
+  font-family: var(--font-mono);
+  color: var(--text-secondary);
+}
+
+.graphiteBranchDot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--text-tertiary) 85%, var(--surface-0) 15%);
+  flex-shrink: 0;
+  position: relative;
+  z-index: 1;
+}
+
+.graphiteBranchDotTrunk {
+  background: var(--accent-green);
+}
+
+.graphiteCurrentBranch {
+  font-weight: var(--weight-semibold);
+  color: var(--text-primary);
+}
+
+.graphiteTrunkBranch {
+  color: var(--text-tertiary);
+}
+
+.graphiteBranchName {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.graphiteTrunkLabel {
+  color: var(--text-tertiary);
+  font-size: var(--text-xs);
+  text-transform: lowercase;
+}
+
+.graphiteRestackWarning {
+  color: var(--accent-orange);
+  font-size: var(--text-sm);
+}
+
+.graphiteChildFile {
+  padding-left: var(--space-8);
+}
+
+.graphiteChildFileEmpty {
+  padding: var(--space-2) var(--space-6) var(--space-2) var(--space-12);
+  color: var(--text-tertiary);
+  font-size: var(--text-sm);
+  font-family: var(--font-ui);
+}
+
 /* ── File Action Buttons (hover-reveal) ── */
 
 .fileActions {
