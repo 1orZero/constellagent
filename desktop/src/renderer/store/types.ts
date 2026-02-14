@@ -46,6 +46,7 @@ export type Tab = {
 export type RightPanelMode = 'files' | 'changes'
 
 export type PrLinkProvider = 'github' | 'graphite' | 'devinreview'
+export type WorkspaceCreationMode = 'worktree' | 'clone'
 
 export interface Settings {
   confirmOnClose: boolean
@@ -53,6 +54,7 @@ export interface Settings {
   defaultShell: string
   useLoginShell: boolean
   restoreWorkspace: boolean
+  workspaceCreationMode: WorkspaceCreationMode
   diffInline: boolean
   terminalFontSize: number
   terminalFontFamily: string
@@ -67,6 +69,7 @@ export const DEFAULT_SETTINGS: Settings = {
   defaultShell: '',
   useLoginShell: true,
   restoreWorkspace: true,
+  workspaceCreationMode: 'worktree',
   diffInline: false,
   terminalFontSize: 14,
   terminalFontFamily: DEFAULT_TERMINAL_FONT_FAMILY,

@@ -314,6 +314,25 @@ export function SettingsPanel() {
             onChange={(v) => update('restoreWorkspace', v)}
           />
 
+          <div className={styles.row}>
+            <div className={styles.rowText}>
+              <div className={styles.rowLabel}>New workspace mode</div>
+              <div className={styles.rowDescription}>
+                Default creation mode for new workspaces.
+              </div>
+            </div>
+            <select
+              className={styles.selectInput}
+              value={settings.workspaceCreationMode}
+              onChange={(e) =>
+                update('workspaceCreationMode', e.target.value as Settings['workspaceCreationMode'])
+              }
+            >
+              <option value="worktree">Worktree</option>
+              <option value="clone">Multiple clone</option>
+            </select>
+          </div>
+
           <ToggleRow
             label="Inline diffs"
             description="Show diffs inline instead of side-by-side"

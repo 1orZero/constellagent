@@ -1,10 +1,9 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useAppStore } from "../../store/app-store";
-import type { Project, PrLinkProvider } from "../../store/types";
+import type { Project, PrLinkProvider, WorkspaceCreationMode } from "../../store/types";
 import type { CreateWorktreeProgressEvent } from "../../../shared/workspace-creation";
 import type { OpenPrInfo, GithubLookupError } from "../../../shared/github-types";
 import { WorkspaceDialog } from "./WorkspaceDialog";
-import type { WorkspaceCreationMode } from "./WorkspaceDialog";
 import { ProjectSettingsDialog } from "./ProjectSettingsDialog";
 import { ConfirmDialog } from "./ConfirmDialog";
 import { Tooltip } from "../Tooltip/Tooltip";
@@ -285,6 +284,7 @@ export function Sidebar() {
   const setPrStatuses = useAppStore((s) => s.setPrStatuses);
   const setGhAvailability = useAppStore((s) => s.setGhAvailability);
   const useLoginShell = useAppStore((s) => s.settings.useLoginShell);
+  const workspaceCreationMode = useAppStore((s) => s.settings.workspaceCreationMode);
 
   const [manualCollapsed, setManualCollapsed] = useState<Set<string>>(
     new Set(),
@@ -1151,13 +1151,14 @@ export function Sidebar() {
       {dialogProject && (
         <WorkspaceDialog
           project={dialogProject}
-          onConfirm={(name, branch, newBranch, creationMode, baseBranch) => {
+          creationMode={workspaceCreationMode}
+          onConfirm={(name, branch, newBranch, baseBranch) => {
             handleCreateWorkspace(
               dialogProject,
               name,
               branch,
               newBranch,
-              creationMode,
+              workspaceCreationMode,
               false,
               baseBranch,
             );

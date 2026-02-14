@@ -1,8 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
-import type { Project } from '../../store/types'
+import type { Project, WorkspaceCreationMode } from '../../store/types'
 import styles from './WorkspaceDialog.module.css'
-
-export type WorkspaceCreationMode = 'worktree' | 'clone'
 
 /** Live-sanitize a string into a valid git branch name as the user types */
 function toBranchName(input: string): string {
@@ -15,11 +13,11 @@ function toBranchName(input: string): string {
 
 interface Props {
   project: Project
+  creationMode: WorkspaceCreationMode
   onConfirm: (
     name: string,
     branch: string,
     newBranch: boolean,
-    creationMode: WorkspaceCreationMode,
     baseBranch?: string,
   ) => void
   onCancel: () => void
@@ -30,6 +28,7 @@ interface Props {
 
 export function WorkspaceDialog({
   project,
+  creationMode,
   onConfirm,
   onCancel,
   isCreating = false,
@@ -40,7 +39,6 @@ export function WorkspaceDialog({
   const [branches, setBranches] = useState<string[]>([])
   const [selectedBranch, setSelectedBranch] = useState('')
   const [isNewBranch, setIsNewBranch] = useState(true)
-  const [creationMode, setCreationMode] = useState<WorkspaceCreationMode>('worktree')
   const [newBranchName, setNewBranchName] = useState('')
   const [baseBranch, setBaseBranch] = useState('')
   const [loading, setLoading] = useState(true)
@@ -76,8 +74,15 @@ export function WorkspaceDialog({
 
   const handleSubmit = useCallback(() => {
     if (isCreating) return
+
+    if (creationMode === 'clone') {
+      const branch = baseBranch || selectedBranch
+      onConfirm(name, branch, false)
+      return
+    }
+
     const branch = isNewBranch ? (newBranchName || name) : selectedBranch
-    onConfirm(name, branch, isNewBranch, creationMode, isNewBranch ? baseBranch : undefined)
+    onConfirm(name, branch, isNewBranch, isNewBranch ? baseBranch : undefined)
   }, [name, isNewBranch, newBranchName, selectedBranch, creationMode, baseBranch, onConfirm, isCreating])
 
   // Close pickers on click outside
@@ -116,53 +121,8 @@ export function WorkspaceDialog({
           placeholder="workspace-name"
         />
 
-        <label className={styles.label}>Mode</label>
-        <div className={styles.branchToggle}>
-          <button
-            className={`${styles.toggleBtn} ${creationMode === 'worktree' ? styles.active : ''}`}
-            onClick={() => setCreationMode('worktree')}
-            disabled={isCreating}
-            type="button"
-          >
-            Worktree
-          </button>
-          <button
-            className={`${styles.toggleBtn} ${creationMode === 'clone' ? styles.active : ''}`}
-            onClick={() => setCreationMode('clone')}
-            disabled={isCreating}
-            type="button"
-          >
-            Multiple clone
-          </button>
-        </div>
-
-        <label className={styles.label}>Branch</label>
-        <div className={styles.branchToggle}>
-          <button
-            className={`${styles.toggleBtn} ${isNewBranch ? styles.active : ''}`}
-            onClick={() => setIsNewBranch(true)}
-            disabled={isCreating}
-          >
-            New branch
-          </button>
-          <button
-            className={`${styles.toggleBtn} ${!isNewBranch ? styles.active : ''}`}
-            onClick={() => setIsNewBranch(false)}
-            disabled={isCreating}
-          >
-            Existing
-          </button>
-        </div>
-
-        {isNewBranch ? (
+        {creationMode === 'clone' ? (
           <>
-            <input
-              className={styles.input}
-              value={newBranchName}
-              onChange={(e) => setNewBranchName(toBranchName(e.target.value))}
-              disabled={isCreating}
-              placeholder={toBranchName(name) || 'branch-name'}
-            />
             <label className={styles.label}>Base branch</label>
             <div className={styles.branchInputRow} ref={basePickerRef}>
               <input
@@ -196,36 +156,99 @@ export function WorkspaceDialog({
             </div>
           </>
         ) : (
-          <div className={styles.branchInputRow} ref={pickerRef}>
-            <input
-              className={styles.input}
-              value={selectedBranch}
-              onChange={(e) => setSelectedBranch(e.target.value)}
-              disabled={loading || isCreating}
-              placeholder="Branch name"
-            />
-            <button
-              className={styles.pickerBtn}
-              onClick={() => setPickerOpen((v) => !v)}
-              disabled={loading || isCreating}
-              type="button"
-            >
-              &#9662;
-            </button>
-            {pickerOpen && (
-              <div className={styles.pickerDropdown}>
-                {branches.map((b) => (
-                  <div
-                    key={b}
-                    className={`${styles.pickerOption} ${b === selectedBranch ? styles.pickerOptionActive : ''}`}
-                    onClick={() => { setSelectedBranch(b); setPickerOpen(false) }}
+          <>
+            <label className={styles.label}>Branch</label>
+            <div className={styles.branchToggle}>
+              <button
+                className={`${styles.toggleBtn} ${isNewBranch ? styles.active : ''}`}
+                onClick={() => setIsNewBranch(true)}
+                disabled={isCreating}
+              >
+                New branch
+              </button>
+              <button
+                className={`${styles.toggleBtn} ${!isNewBranch ? styles.active : ''}`}
+                onClick={() => setIsNewBranch(false)}
+                disabled={isCreating}
+              >
+                Existing
+              </button>
+            </div>
+
+            {isNewBranch ? (
+              <>
+                <input
+                  className={styles.input}
+                  value={newBranchName}
+                  onChange={(e) => setNewBranchName(toBranchName(e.target.value))}
+                  disabled={isCreating}
+                  placeholder={toBranchName(name) || 'branch-name'}
+                />
+                <label className={styles.label}>Base branch</label>
+                <div className={styles.branchInputRow} ref={basePickerRef}>
+                  <input
+                    className={styles.input}
+                    value={baseBranch}
+                    onChange={(e) => setBaseBranch(e.target.value)}
+                    disabled={loading || isCreating}
+                    placeholder="Base branch"
+                  />
+                  <button
+                    className={styles.pickerBtn}
+                    onClick={() => setBasePickerOpen((v) => !v)}
+                    disabled={loading || isCreating}
+                    type="button"
                   >
-                    {b}
+                    &#9662;
+                  </button>
+                  {basePickerOpen && (
+                    <div className={styles.pickerDropdown}>
+                      {branches.map((b) => (
+                        <div
+                          key={b}
+                          className={`${styles.pickerOption} ${b === baseBranch ? styles.pickerOptionActive : ''}`}
+                          onClick={() => { setBaseBranch(b); setBasePickerOpen(false) }}
+                        >
+                          {b}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </>
+            ) : (
+              <div className={styles.branchInputRow} ref={pickerRef}>
+                <input
+                  className={styles.input}
+                  value={selectedBranch}
+                  onChange={(e) => setSelectedBranch(e.target.value)}
+                  disabled={loading || isCreating}
+                  placeholder="Branch name"
+                />
+                <button
+                  className={styles.pickerBtn}
+                  onClick={() => setPickerOpen((v) => !v)}
+                  disabled={loading || isCreating}
+                  type="button"
+                >
+                  &#9662;
+                </button>
+                {pickerOpen && (
+                  <div className={styles.pickerDropdown}>
+                    {branches.map((b) => (
+                      <div
+                        key={b}
+                        className={`${styles.pickerOption} ${b === selectedBranch ? styles.pickerOptionActive : ''}`}
+                        onClick={() => { setSelectedBranch(b); setPickerOpen(false) }}
+                      >
+                        {b}
+                      </div>
+                    ))}
                   </div>
-                ))}
+                )}
               </div>
             )}
-          </div>
+          </>
         )}
 
         {isCreating && (
@@ -242,7 +265,11 @@ export function WorkspaceDialog({
 
         <div className={styles.actions}>
           <button className={styles.cancelBtn} onClick={onCancel} disabled={isCreating}>Cancel</button>
-          <button className={styles.createBtn} onClick={handleSubmit} disabled={!name.trim() || isCreating}>
+          <button
+            className={styles.createBtn}
+            onClick={handleSubmit}
+            disabled={!name.trim() || isCreating || (creationMode === 'clone' && !baseBranch.trim())}
+          >
             {isCreating ? 'Creating...' : 'Create'}
           </button>
         </div>
