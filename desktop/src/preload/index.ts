@@ -95,6 +95,10 @@ const api = {
       ipcRenderer.invoke(IPC.APP_SELECT_DIRECTORY),
     addProjectPath: (dirPath: string) =>
       ipcRenderer.invoke(IPC.APP_ADD_PROJECT_PATH, dirPath),
+    setZoomFactor: (factor: number) =>
+      ipcRenderer.invoke(IPC.APP_SET_ZOOM_FACTOR, factor) as Promise<number>,
+    getZoomFactor: () =>
+      ipcRenderer.invoke(IPC.APP_GET_ZOOM_FACTOR) as Promise<number>,
   },
 
   claude: {

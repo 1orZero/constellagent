@@ -4,7 +4,8 @@ import { DEFAULT_SETTINGS } from '../src/renderer/store/types'
 
 describe('terminal font customization', () => {
   test('provides a default terminal font family in settings', () => {
-    expect(DEFAULT_SETTINGS.terminalFontFamily).toBe("'SF Mono', Menlo, 'Cascadia Code', monospace")
+    expect(DEFAULT_SETTINGS.terminalFontFamily)
+      .toBe("'SF Mono', Menlo, 'Cascadia Code', 'Symbols Nerd Font Mono', monospace")
   })
 
   test('applies updated font family to live terminals', () => {

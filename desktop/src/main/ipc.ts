@@ -459,6 +459,17 @@ export function registerIpcHandlers(): void {
     }
   })
 
+  ipcMain.handle(IPC.APP_SET_ZOOM_FACTOR, async (_e, factor: number) => {
+    const numeric = Number.isFinite(factor) ? factor : 1
+    const clamped = Math.max(0.5, Math.min(2, numeric))
+    _e.sender.setZoomFactor(clamped)
+    return clamped
+  })
+
+  ipcMain.handle(IPC.APP_GET_ZOOM_FACTOR, async (_e) => {
+    return _e.sender.getZoomFactor()
+  })
+
   // ── Claude Code trust ──
   ipcMain.handle(IPC.CLAUDE_TRUST_PATH, async (_e, dirPath: string) => {
     await trustPathForClaude(dirPath)
