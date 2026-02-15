@@ -46,12 +46,14 @@ const api = {
   },
 
   pty: {
-    create: (workingDir: string, shell?: string, extraEnv?: Record<string, string>, useLoginShell?: boolean) =>
-      ipcRenderer.invoke(IPC.PTY_CREATE, workingDir, shell, extraEnv, useLoginShell),
+    create: (workingDir: string, shell?: string, extraEnv?: Record<string, string>, useLoginShell?: boolean, sessionId?: string) =>
+      ipcRenderer.invoke(IPC.PTY_CREATE, workingDir, shell, extraEnv, useLoginShell, sessionId),
     write: (ptyId: string, data: string) =>
       ipcRenderer.send(IPC.PTY_WRITE, ptyId, data),
     resize: (ptyId: string, cols: number, rows: number) =>
       ipcRenderer.send(IPC.PTY_RESIZE, ptyId, cols, rows),
+    detach: (ptyId: string) =>
+      ipcRenderer.send(IPC.PTY_DETACH, ptyId),
     destroy: (ptyId: string) =>
       ipcRenderer.send(IPC.PTY_DESTROY, ptyId),
     list: () =>
@@ -95,6 +97,10 @@ const api = {
       ipcRenderer.invoke(IPC.APP_SELECT_DIRECTORY),
     addProjectPath: (dirPath: string) =>
       ipcRenderer.invoke(IPC.APP_ADD_PROJECT_PATH, dirPath),
+    setZoomFactor: (factor: number) =>
+      ipcRenderer.invoke(IPC.APP_SET_ZOOM_FACTOR, factor) as Promise<number>,
+    getZoomFactor: () =>
+      ipcRenderer.invoke(IPC.APP_GET_ZOOM_FACTOR) as Promise<number>,
   },
 
   claude: {
