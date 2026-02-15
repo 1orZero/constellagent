@@ -62,7 +62,8 @@ export interface Settings {
   editorFontSize: number
 }
 
-export const DEFAULT_TERMINAL_FONT_FAMILY = "'SF Mono', Menlo, 'Cascadia Code', monospace"
+export const DEFAULT_TERMINAL_FONT_FAMILY =
+  "'SF Mono', Menlo, 'Cascadia Code', 'Symbols Nerd Font Mono', monospace"
 
 export const DEFAULT_SETTINGS: Settings = {
   confirmOnClose: true,

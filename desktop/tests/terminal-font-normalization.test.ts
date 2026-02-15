@@ -9,11 +9,16 @@ describe('normalizeTerminalFontFamily', () => {
 
   test('quotes a single family with spaces and appends monospace fallback', () => {
     expect(normalizeTerminalFontFamily('JetBrains Mono Nerd Font'))
-      .toBe("'JetBrains Mono Nerd Font', monospace")
+      .toBe("'JetBrains Mono Nerd Font', 'Symbols Nerd Font Mono', monospace")
   })
 
-  test('keeps existing comma-separated values and preserves generic families', () => {
+  test('keeps existing comma-separated values and injects symbols fallback', () => {
     expect(normalizeTerminalFontFamily("JetBrainsMono Nerd Font, 'SF Mono', monospace"))
-      .toBe("'JetBrainsMono Nerd Font', 'SF Mono', monospace")
+      .toBe("'JetBrainsMono Nerd Font', 'SF Mono', 'Symbols Nerd Font Mono', monospace")
+  })
+
+  test('does not duplicate symbols fallback when already provided', () => {
+    expect(normalizeTerminalFontFamily("CaskaydiaCove Nerd Font Mono, 'Symbols Nerd Font Mono', monospace"))
+      .toBe("'CaskaydiaCove Nerd Font Mono', 'Symbols Nerd Font Mono', monospace")
   })
 })

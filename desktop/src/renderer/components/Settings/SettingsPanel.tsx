@@ -324,7 +324,7 @@ export function SettingsPanel() {
             description="Comma-separated font list; names with spaces are auto-quoted"
             value={settings.terminalFontFamily}
             onChange={(v) => update('terminalFontFamily', v)}
-            placeholder="'SF Mono', Menlo, 'Cascadia Code', monospace"
+            placeholder="'SF Mono', Menlo, 'Cascadia Code', 'Symbols Nerd Font Mono', monospace"
           />
 
           <NumberRow
