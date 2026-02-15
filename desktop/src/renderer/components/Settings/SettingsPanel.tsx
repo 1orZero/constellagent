@@ -1,17 +1,19 @@
 import { useEffect, useState } from 'react'
 import { useAppStore } from '../../store/app-store'
-import type { Settings } from '../../store/types'
+import { createDefaultShortcutSettings } from '../../store/types'
+import type { Settings, ShortcutBinding, ShortcutSettings } from '../../store/types'
 import { Tooltip } from '../Tooltip/Tooltip'
 import styles from './SettingsPanel.module.css'
 
-const SHORTCUTS = [
+const SLOT_COUNT = 9
+
+const FIXED_SHORTCUTS = [
   { action: 'Quick open file', keys: '⌘P' },
   { action: 'New terminal', keys: '⌘T' },
   { action: 'Close tab', keys: '⌘W' },
   { action: 'Close all tabs', keys: '⇧⌘W' },
   { action: 'Next tab', keys: '⇧⌘]' },
   { action: 'Previous tab', keys: '⇧⌘[' },
-  { action: 'Tab 1–9', keys: '⌘1 – ⌘9' },
   { action: 'Next workspace', keys: '⇧⌘↓' },
   { action: 'Previous workspace', keys: '⇧⌘↑' },
   { action: 'New workspace', keys: '⌘N' },
@@ -20,11 +22,84 @@ const SHORTCUTS = [
   { action: 'Files panel', keys: '⇧⌘E' },
   { action: 'Changes panel', keys: '⇧⌘G' },
   { action: 'Focus terminal', keys: '⌘J' },
-  { action: 'Increase font size', keys: '⌘+' },
-  { action: 'Decrease font size', keys: '⌘−' },
-  { action: 'Reset font size', keys: '⌘0' },
+  { action: 'Zoom in', keys: '⌘+' },
+  { action: 'Zoom out', keys: '⌘−' },
+  { action: 'Reset zoom', keys: '⌘0' },
   { action: 'Settings', keys: '⌘,' },
 ]
+
+const MODIFIER_CODES = new Set([
+  'MetaLeft',
+  'MetaRight',
+  'ControlLeft',
+  'ControlRight',
+  'ShiftLeft',
+  'ShiftRight',
+  'AltLeft',
+  'AltRight',
+])
+
+function isShortcutBinding(value: ShortcutBinding | null | undefined): value is ShortcutBinding {
+  if (!value) return false
+  return typeof value.code === 'string'
+}
+
+function normalizeShortcutSlots(shortcuts: Array<ShortcutBinding | null> | undefined): Array<ShortcutBinding | null> {
+  const source = Array.isArray(shortcuts) ? shortcuts : []
+  return Array.from({ length: SLOT_COUNT }, (_v, index) => {
+    const binding = source[index]
+    return isShortcutBinding(binding) ? binding : null
+  })
+}
+
+function ensureShortcutSettings(settings: ShortcutSettings | undefined): ShortcutSettings {
+  const defaults = createDefaultShortcutSettings()
+  if (!settings) return defaults
+  return {
+    tabByIndex: normalizeShortcutSlots(settings.tabByIndex ?? defaults.tabByIndex),
+    workspaceByIndex: normalizeShortcutSlots(settings.workspaceByIndex ?? defaults.workspaceByIndex),
+  }
+}
+
+function formatCode(code: string): string {
+  if (code.startsWith('Digit')) return code.slice(5)
+  if (code.startsWith('Key')) return code.slice(3)
+  if (code === 'Comma') return ','
+  if (code === 'BracketLeft') return '['
+  if (code === 'BracketRight') return ']'
+  if (code === 'Minus') return '-'
+  if (code === 'Equal') return '='
+  if (code === 'ArrowUp') return '↑'
+  if (code === 'ArrowDown') return '↓'
+  if (code === 'ArrowLeft') return '←'
+  if (code === 'ArrowRight') return '→'
+  if (code === 'Enter') return '↵'
+  if (code === 'Space') return 'Space'
+  return code
+}
+
+function formatShortcut(binding: ShortcutBinding | null): string {
+  if (!binding) return 'Not set'
+  return `${binding.ctrl ? '⌃' : ''}${binding.alt ? '⌥' : ''}${binding.shift ? '⇧' : ''}${binding.meta ? '⌘' : ''}${formatCode(binding.code)}`
+}
+
+function sameShortcut(a: ShortcutBinding | null, b: ShortcutBinding | null): boolean {
+  if (!a || !b) return false
+  return (
+    a.code === b.code
+    && a.meta === b.meta
+    && a.ctrl === b.ctrl
+    && a.shift === b.shift
+    && a.alt === b.alt
+  )
+}
+
+type ShortcutScope = 'tabByIndex' | 'workspaceByIndex'
+
+interface RecordingTarget {
+  scope: ShortcutScope
+  index: number
+}
 
 function ToggleRow({ label, description, value, onChange }: {
   label: string
@@ -100,6 +175,89 @@ function NumberRow({ label, description, value, onChange, min = 8, max = 32 }: {
           disabled={value >= max}
         >
           +
+        </button>
+      </div>
+    </div>
+  )
+}
+
+function ZoomRow({ label, description, value, onChange }: {
+  label: string
+  description: string
+  value: number
+  onChange: (v: number) => void
+}) {
+  const min = 0.5
+  const max = 2
+  const step = 0.1
+  const display = `${Math.round(value * 100)}%`
+
+  return (
+    <div className={styles.row}>
+      <div className={styles.rowText}>
+        <div className={styles.rowLabel}>{label}</div>
+        <div className={styles.rowDescription}>{description}</div>
+      </div>
+      <div className={styles.stepper}>
+        <button
+          className={styles.stepperBtn}
+          onClick={() => onChange(Math.max(min, Math.round((value - step) * 10) / 10))}
+          disabled={value <= min}
+        >
+          −
+        </button>
+        <span className={styles.stepperValue}>{display}</span>
+        <button
+          className={styles.stepperBtn}
+          onClick={() => onChange(Math.min(max, Math.round((value + step) * 10) / 10))}
+          disabled={value >= max}
+        >
+          +
+        </button>
+      </div>
+    </div>
+  )
+}
+
+function ShortcutBindingRow({
+  label,
+  description,
+  value,
+  recording,
+  onStartRecording,
+  onCapture,
+  onClear,
+}: {
+  label: string
+  description: string
+  value: ShortcutBinding | null
+  recording: boolean
+  onStartRecording: () => void
+  onCapture: (event: React.KeyboardEvent<HTMLButtonElement>) => void
+  onClear: () => void
+}) {
+  return (
+    <div className={styles.row}>
+      <div className={styles.rowText}>
+        <div className={styles.rowLabel}>{label}</div>
+        <div className={styles.rowDescription}>{description}</div>
+      </div>
+      <div className={styles.shortcutControls}>
+        <button
+          className={`${styles.shortcutCaptureBtn} ${recording ? styles.shortcutCaptureBtnRecording : ''}`}
+          data-shortcut-recorder="true"
+          onClick={onStartRecording}
+          onKeyDown={onCapture}
+        >
+          {recording ? 'Press shortcut...' : formatShortcut(value)}
+        </button>
+        <button
+          className={styles.shortcutClearBtn}
+          data-shortcut-recorder="true"
+          onClick={onClear}
+          disabled={!value}
+        >
+          Clear
         </button>
       </div>
     </div>
@@ -236,9 +394,77 @@ export function SettingsPanel() {
   const settings = useAppStore((s) => s.settings)
   const updateSettings = useAppStore((s) => s.updateSettings)
   const toggleSettings = useAppStore((s) => s.toggleSettings)
+  const addToast = useAppStore((s) => s.addToast)
+  const [recordingTarget, setRecordingTarget] = useState<RecordingTarget | null>(null)
+
+  const shortcutSettings = ensureShortcutSettings(settings.shortcuts)
 
   const update = <K extends keyof Settings>(key: K, value: Settings[K]) => {
     updateSettings({ [key]: value })
+  }
+
+  const updateShortcut = (scope: ShortcutScope, index: number, binding: ShortcutBinding | null) => {
+    const next = ensureShortcutSettings(settings.shortcuts)
+    const slots = [...next[scope]]
+    slots[index] = binding
+    update('shortcuts', {
+      ...next,
+      [scope]: slots,
+    })
+  }
+
+  const findShortcutConflict = (scope: ShortcutScope, index: number, candidate: ShortcutBinding) => {
+    for (let slot = 0; slot < SLOT_COUNT; slot += 1) {
+      if (!(scope === 'tabByIndex' && slot === index) && sameShortcut(shortcutSettings.tabByIndex[slot], candidate)) {
+        return `Tab ${slot + 1}`
+      }
+      if (!(scope === 'workspaceByIndex' && slot === index) && sameShortcut(shortcutSettings.workspaceByIndex[slot], candidate)) {
+        return `Workspace ${slot + 1}`
+      }
+    }
+    return null
+  }
+
+  const captureShortcut = (scope: ShortcutScope, index: number, event: React.KeyboardEvent<HTMLButtonElement>) => {
+    event.preventDefault()
+    event.stopPropagation()
+
+    if (event.key === 'Escape') {
+      setRecordingTarget(null)
+      return
+    }
+
+    if (MODIFIER_CODES.has(event.code)) return
+
+    const binding: ShortcutBinding = {
+      code: event.code,
+      meta: event.metaKey,
+      ctrl: event.ctrlKey,
+      shift: event.shiftKey,
+      alt: event.altKey,
+    }
+
+    if (!binding.meta && !binding.ctrl) {
+      addToast({
+        id: crypto.randomUUID(),
+        message: 'Shortcut must include Command or Control.',
+        type: 'error',
+      })
+      return
+    }
+
+    const conflict = findShortcutConflict(scope, index, binding)
+    if (conflict) {
+      addToast({
+        id: crypto.randomUUID(),
+        message: `Shortcut already used by ${conflict}.`,
+        type: 'error',
+      })
+      return
+    }
+
+    updateShortcut(scope, index, binding)
+    setRecordingTarget(null)
   }
 
   useEffect(() => {
@@ -266,6 +492,13 @@ export function SettingsPanel() {
         <div className={styles.inner}>
         <div className={styles.section}>
           <div className={styles.sectionTitle}>Appearance</div>
+
+          <ZoomRow
+            label="Interface zoom"
+            description="Scale the entire app interface"
+            value={settings.uiZoomFactor}
+            onChange={(v) => update('uiZoomFactor', v)}
+          />
 
           <NumberRow
             label="Terminal font size"
@@ -374,7 +607,37 @@ export function SettingsPanel() {
         <div className={styles.section}>
           <div className={styles.sectionTitle}>Keyboard Shortcuts</div>
 
-          {SHORTCUTS.map((s) => (
+          <div className={styles.shortcutSubTitle}>Configurable</div>
+
+          {Array.from({ length: SLOT_COUNT }, (_v, index) => (
+            <ShortcutBindingRow
+              key={`tab-shortcut-${index}`}
+              label={`Tab ${index + 1}`}
+              description="Switch to tab by position"
+              value={shortcutSettings.tabByIndex[index]}
+              recording={recordingTarget?.scope === 'tabByIndex' && recordingTarget.index === index}
+              onStartRecording={() => setRecordingTarget({ scope: 'tabByIndex', index })}
+              onCapture={(event) => captureShortcut('tabByIndex', index, event)}
+              onClear={() => updateShortcut('tabByIndex', index, null)}
+            />
+          ))}
+
+          {Array.from({ length: SLOT_COUNT }, (_v, index) => (
+            <ShortcutBindingRow
+              key={`workspace-shortcut-${index}`}
+              label={`Workspace ${index + 1}`}
+              description="Switch to workspace by sidebar order"
+              value={shortcutSettings.workspaceByIndex[index]}
+              recording={recordingTarget?.scope === 'workspaceByIndex' && recordingTarget.index === index}
+              onStartRecording={() => setRecordingTarget({ scope: 'workspaceByIndex', index })}
+              onCapture={(event) => captureShortcut('workspaceByIndex', index, event)}
+              onClear={() => updateShortcut('workspaceByIndex', index, null)}
+            />
+          ))}
+
+          <div className={styles.shortcutSubTitle}>Fixed</div>
+
+          {FIXED_SHORTCUTS.map((s) => (
             <div key={s.action} className={styles.shortcutRow}>
               <span className={styles.shortcutAction}>{s.action}</span>
               <kbd className={styles.kbd}>{s.keys}</kbd>

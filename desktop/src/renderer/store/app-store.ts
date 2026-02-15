@@ -4,6 +4,19 @@ import { DEFAULT_SETTINGS } from './types'
 
 const DEFAULT_PR_LINK_PROVIDER = 'github' as const
 
+function getOrderedWorkspaces(state: Pick<AppState, 'projects' | 'workspaces'>) {
+  return state.projects.flatMap((project) =>
+    state.workspaces.filter((workspace) => workspace.projectId === project.id),
+  )
+}
+
+function getVisibleOrderedWorkspaces(state: Pick<AppState, 'projects' | 'workspaces' | 'collapsedProjectIds'>) {
+  return state.projects.flatMap((project) => {
+    if (state.collapsedProjectIds.has(project.id)) return []
+    return state.workspaces.filter((workspace) => workspace.projectId === project.id)
+  })
+}
+
 export const useAppStore = create<AppState>((set, get) => ({
   projects: [],
   workspaces: [],
@@ -27,6 +40,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   activeClaudeWorkspaceIds: new Set<string>(),
   prStatusMap: new Map(),
   ghAvailability: new Map(),
+  collapsedProjectIds: new Set(),
 
   addProject: (project) =>
     set((s) => ({
@@ -58,6 +72,8 @@ export const useAppStore = create<AppState>((set, get) => ({
       )
       const newGhAvailability = new Map(s.ghAvailability)
       newGhAvailability.delete(id)
+      const newCollapsedProjects = new Set(s.collapsedProjectIds)
+      newCollapsedProjects.delete(id)
 
       const tabMap = { ...s.lastActiveTabByWorkspace }
       for (const wsId of removedWsIds) delete tabMap[wsId]
@@ -79,6 +95,7 @@ export const useAppStore = create<AppState>((set, get) => ({
         activeClaudeWorkspaceIds: newActiveClaude,
         prStatusMap: newPrStatusMap,
         ghAvailability: newGhAvailability,
+        collapsedProjectIds: newCollapsedProjects,
         activeWorkspaceId,
         activeTabId,
         lastActiveTabByWorkspace: tabMap,
@@ -272,9 +289,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     const s = get()
     if (s.workspaces.length <= 1) return
     // Build visual order: workspaces grouped by project, matching sidebar display
-    const ordered = s.projects.flatMap((p) =>
-      s.workspaces.filter((w) => w.projectId === p.id),
-    )
+    const ordered = getOrderedWorkspaces(s)
     if (ordered.length <= 1) return
     const idx = ordered.findIndex((w) => w.id === s.activeWorkspaceId)
     const next = ordered[(idx + 1) % ordered.length]
@@ -284,13 +299,18 @@ export const useAppStore = create<AppState>((set, get) => ({
   prevWorkspace: () => {
     const s = get()
     if (s.workspaces.length <= 1) return
-    const ordered = s.projects.flatMap((p) =>
-      s.workspaces.filter((w) => w.projectId === p.id),
-    )
+    const ordered = getOrderedWorkspaces(s)
     if (ordered.length <= 1) return
     const idx = ordered.findIndex((w) => w.id === s.activeWorkspaceId)
     const prev = ordered[(idx - 1 + ordered.length) % ordered.length]
     get().setActiveWorkspace(prev.id)
+  },
+
+  switchToWorkspaceByIndex: (index) => {
+    const s = get()
+    const ordered = getVisibleOrderedWorkspaces(s)
+    if (index < 0 || index >= ordered.length) return
+    get().setActiveWorkspace(ordered[index].id)
   },
 
   switchToTabByIndex: (index) => {
@@ -404,6 +424,14 @@ export const useAppStore = create<AppState>((set, get) => ({
   toggleQuickOpen: () => set((s) => ({ quickOpenVisible: !s.quickOpenVisible })),
   closeQuickOpen: () => set({ quickOpenVisible: false }),
 
+  toggleProjectCollapsed: (projectId) =>
+    set((s) => {
+      const next = new Set(s.collapsedProjectIds)
+      if (next.has(projectId)) next.delete(projectId)
+      else next.add(projectId)
+      return { collapsedProjectIds: next }
+    }),
+
   markWorkspaceUnread: (workspaceId) =>
     set((s) => {
       if (s.unreadWorkspaceIds.has(workspaceId)) return s
@@ -489,6 +517,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       activeTabId,
       lastActiveTabByWorkspace: data.lastActiveTabByWorkspace ?? {},
       settings,
+      collapsedProjectIds: new Set(),
     })
   },
 
@@ -559,6 +588,12 @@ export async function hydrateFromDisk(): Promise<void> {
     }
   } catch (err) {
     console.error('Failed to load persisted state:', err)
+  }
+
+  try {
+    await window.api.app.setZoomFactor(useAppStore.getState().settings.uiZoomFactor)
+  } catch (err) {
+    console.error('Failed to apply persisted UI zoom factor:', err)
   }
 
   // Reconcile persisted terminal tabs against live PTY processes

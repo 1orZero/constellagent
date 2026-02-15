@@ -40,6 +40,8 @@ export const IPC = {
   // App operations
   APP_SELECT_DIRECTORY: 'app:select-directory',
   APP_ADD_PROJECT_PATH: 'app:add-project-path',
+  APP_SET_ZOOM_FACTOR: 'app:set-zoom-factor',
+  APP_GET_ZOOM_FACTOR: 'app:get-zoom-factor',
 
   // Claude Code integration
   CLAUDE_TRUST_PATH: 'claude:trust-path',

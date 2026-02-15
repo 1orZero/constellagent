@@ -1,9 +1,35 @@
 import { useEffect } from 'react'
 import { useAppStore } from '../store/app-store'
+import type { ShortcutBinding } from '../store/types'
+
+const SHORTCUT_SLOT_COUNT = 9
+
+function normalizeShortcutSlots(shortcuts: Array<ShortcutBinding | null> | undefined): Array<ShortcutBinding | null> {
+  const source = Array.isArray(shortcuts) ? shortcuts : []
+  return Array.from({ length: SHORTCUT_SLOT_COUNT }, (_v, index) => source[index] ?? null)
+}
+
+function matchesShortcutEvent(event: KeyboardEvent, binding: ShortcutBinding | null): boolean {
+  if (!binding) return false
+  return (
+    event.code === binding.code
+    && event.metaKey === binding.meta
+    && event.ctrlKey === binding.ctrl
+    && event.shiftKey === binding.shift
+    && event.altKey === binding.alt
+  )
+}
+
+function isShortcutRecorderTarget(target: EventTarget | null): boolean {
+  const element = target as HTMLElement | null
+  return !!element?.closest?.('[data-shortcut-recorder="true"]')
+}
 
 export function useShortcuts() {
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
+      if (isShortcutRecorderTarget(e.target)) return
+
       // Shift+Enter handling when terminal is focused
       if (e.key === 'Enter' && e.shiftKey && !e.metaKey && !e.ctrlKey && !e.altKey
         && (e.target as HTMLElement)?.closest?.('[class*="terminalInner"]')) {
@@ -60,17 +86,26 @@ export function useShortcuts() {
         e.stopPropagation()
       }
 
+      const tabShortcuts = normalizeShortcutSlots(store.settings.shortcuts?.tabByIndex)
+      const tabShortcutIndex = tabShortcuts.findIndex((binding) => matchesShortcutEvent(e, binding))
+      if (tabShortcutIndex !== -1) {
+        consume()
+        store.switchToTabByIndex(tabShortcutIndex)
+        return
+      }
+
+      const workspaceShortcuts = normalizeShortcutSlots(store.settings.shortcuts?.workspaceByIndex)
+      const workspaceShortcutIndex = workspaceShortcuts.findIndex((binding) => matchesShortcutEvent(e, binding))
+      if (workspaceShortcutIndex !== -1) {
+        consume()
+        store.switchToWorkspaceByIndex(workspaceShortcutIndex)
+        return
+      }
+
       // ── Quick open: Cmd+P ──
       if (!shift && !alt && e.key === 'p') {
         consume()
         store.toggleQuickOpen()
-        return
-      }
-
-      // ── Tab switching: Cmd+1-9 ──
-      if (!shift && !alt && e.key >= '1' && e.key <= '9') {
-        consume()
-        store.switchToTabByIndex(parseInt(e.key) - 1)
         return
       }
 
@@ -154,19 +189,30 @@ export function useShortcuts() {
         return
       }
 
-      // ── Font size: Cmd+= / Cmd+- / Cmd+0 ──
-      if (!shift && !alt && (e.key === '=' || e.key === '-' || e.key === '0')) {
+      // ── UI zoom: Cmd+/Ctrl + / - / 0 ──
+      if (!alt && (
+        e.key === '='
+        || e.key === '+'
+        || e.key === '-'
+        || e.key === '_'
+        || e.key === '0'
+        || e.code === 'NumpadAdd'
+        || e.code === 'NumpadSubtract'
+        || e.code === 'Numpad0'
+      )) {
         consume()
-        const tab = store.tabs.find((t) => t.id === store.activeTabId)
-        const isTerminal = tab?.type === 'terminal'
-        const key = isTerminal ? 'terminalFontSize' : 'editorFontSize'
-        if (e.key === '0') {
-          store.updateSettings({ terminalFontSize: 14, editorFontSize: 13 })
+        const current = store.settings.uiZoomFactor
+        let next = current
+
+        if (e.key === '0' || e.code === 'Numpad0') {
+          next = 1
+        } else if (e.key === '-' || e.key === '_' || e.code === 'NumpadSubtract') {
+          next = current - 0.1
         } else {
-          const current = store.settings[key]
-          const next = Math.max(8, Math.min(32, current + (e.key === '=' ? 1 : -1)))
-          store.updateSettings({ [key]: next })
+          next = current + 0.1
         }
+
+        store.updateSettings({ uiZoomFactor: Math.max(0.5, Math.min(2, Math.round(next * 10) / 10)) })
         return
       }
 
